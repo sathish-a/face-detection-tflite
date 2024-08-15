@@ -107,12 +107,12 @@ def face_detection_to_roi(
         (Rect) Normalized ROI for passing to `FaceLandmark`.
     """
     absolute_detection = face_detection.scaled(image_size)
-    left_eye = absolute_detection[FaceIndex.LEFT_EYE]
-    right_eye = absolute_detection[FaceIndex.RIGHT_EYE]
+    left_eye = absolute_detection[FaceIndex.LEFT_EYE] if len(absolute_detection) > 0 else None
+    right_eye = absolute_detection[FaceIndex.RIGHT_EYE] if len(absolute_detection) > 0 else None
     return bbox_to_roi(
         face_detection.bbox,
         image_size,
-        rotation_keypoints=[left_eye, right_eye],
+        rotation_keypoints=[left_eye, right_eye] if left_eye and right_eye else None,
         scale=ROI_SCALE,
         size_mode=SizeMode.SQUARE_LONG
     )
