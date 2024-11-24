@@ -61,7 +61,7 @@ class Rect:
         pts = [(x - w, y - h), (x + w, y - h), (x + w, y + h), (x - w, y + h)]
         if self.rotation == 0:
             return pts
-        s, c = np.math.sin(self.rotation), np.math.cos(self.rotation)
+        s, c = np.sin(self.rotation), np.cos(self.rotation)
         t = np.array(pts) - (x, y)
         r = np.array([[c, s], [-s, c]])
         return np.matmul(t, r) + (x, y)
