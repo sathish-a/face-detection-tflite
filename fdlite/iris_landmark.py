@@ -101,7 +101,7 @@ RIGHT_EYE_TO_FACE_LANDMARK_INDEX = [
 ]
 
 # 35mm camera sensor diagonal (36mm * 24mm)
-SENSOR_DIAGONAL_35MM = np.math.sqrt(36 ** 2 + 24 ** 2)
+SENSOR_DIAGONAL_35MM = np.sqrt(36 ** 2 + 24 ** 2)
 # average human iris size
 IRIS_SIZE_IN_MM = 11.8
 
@@ -385,7 +385,7 @@ def iris_depth_in_mm_from_landmarks(
     if height_px > width_px:
         w, h = h, w
     sqr_inv_aspect = (h / w) ** 2
-    sensor_width = np.math.sqrt((sensor_diagonal_mm**2) / (1 + sqr_inv_aspect))
+    sensor_width = np.sqrt((sensor_diagonal_mm**2) / (1 + sqr_inv_aspect))
     focal_len_px = w * focal_len_mm / sensor_width
     left_landmarks, right_landmarks = iris_data_left.iris, iris_data_right.iris
     left_iris_size = _get_iris_diameter(left_landmarks, pixel_size)
@@ -507,7 +507,7 @@ def _get_iris_diameter(
 
     def get_landmark_depth(a: Landmark, b: Landmark) -> float:
         x0, y0, x1, y1 = a.x * width, a.y * height, b.x * width, b.y * height
-        return np.math.sqrt((x0 - x1) ** 2 + (y0 - y1) ** 2)
+        return np.sqrt((x0 - x1) ** 2 + (y0 - y1) ** 2)
 
     iris_size_horiz = get_landmark_depth(iris_landmarks[IrisIndex.LEFT],
                                          iris_landmarks[IrisIndex.RIGHT])
@@ -527,6 +527,6 @@ def _get_iris_depth(
     center = iris_landmarks[IrisIndex.CENTER]
     x0, y0 = width / 2, height / 2
     x1, y1 = center.x * width, center.y * height
-    y = np.math.sqrt((x0 - x1) ** 2 + (y0 - y1) ** 2)
-    x = np.math.sqrt(focal_length_mm ** 2 + y ** 2)
+    y = np.sqrt((x0 - x1) ** 2 + (y0 - y1) ** 2)
+    x = np.sqrt(focal_length_mm ** 2 + y ** 2)
     return IRIS_SIZE_IN_MM * x / iris_size_px
