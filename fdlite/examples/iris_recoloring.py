@@ -91,7 +91,7 @@ def _get_iris_mask(
     b_sqr = b**2
     for y in range(y_start, y_end):
         # evaluate iris ellipse at y
-        x = int(a * np.math.sqrt(b_sqr - (y-cy)**2) / b)
+        x = int(a * np.sqrt(b_sqr - (y-cy)**2) / b)
         x0, x1 = cx - x, cx + x
         A, B = _find_contour_segment(eyeball_sorted, (x0, y))
         left_inside = _is_below_segment(A, B, (x0, y), box_center_y)
