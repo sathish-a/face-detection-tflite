@@ -446,20 +446,27 @@ class IrisLandmark:
             model_path = os.path.join(os.path.dirname(my_path), 'data')
         self.model_path = os.path.join(model_path, MODEL_NAME)
         self.interpreter = tf.lite.Interpreter(model_path=self.model_path)
-        self.input_index = self.interpreter.get_input_details()[0]['index']
-        self.input_shape = self.interpreter.get_input_details()[0]['shape']
-        self.eye_index = self.interpreter.get_output_details()[0]['index']
-        self.iris_index = self.interpreter.get_output_details()[1]['index']
+        
+        input_details = self.interpreter.get_input_details()
+        output_details = self.interpreter.get_output_details()
 
-        eye_shape = self.interpreter.get_output_details()[0]['shape']
+        self.input_index = input_details[0]['index']
+        self.input_shape = input_details[0]['shape']
+        self.eye_index = output_details[0]['index']
+        self.iris_index = output_details[1]['index']
+
+        eye_shape = output_details[0]['shape']
         if eye_shape[-1] != NUM_DIMS * NUM_EYE_LANDMARKS:
             raise ModelDataError('unexpected number of eye landmarks: '
                                  f'{eye_shape[-1]}')
-        iris_shape = self.interpreter.get_output_details()[1]['shape']
+        
+        iris_shape = output_details[1]['shape']
         if iris_shape[-1] != NUM_DIMS * NUM_IRIS_LANDMARKS:
             raise ModelDataError('unexpected number of iris landmarks: '
                                  f'{eye_shape[-1]}')
+        
         self.interpreter.allocate_tensors()
+        self.input_tensor = np.zeros(self.input_shape, dtype=np.float32)
 
     def __call__(
         self,
@@ -476,12 +483,15 @@ class IrisLandmark:
             output_range=(0, 1),        # see iris_landmark_cpu.pbtxt
             flip_horizontal=is_right_eye
         )
-        input_data = image_data.tensor_data[np.newaxis]
-        self.interpreter.set_tensor(self.input_index, input_data)
+        
+        # input_data = image_data.tensor_data[np.newaxis]
+        np.copyto(self.input_tensor[0], image_data.tensor_data)
+        self.interpreter.set_tensor(self.input_index, self.input_tensor)
         self.interpreter.invoke()
+
         raw_eye_landmarks = self.interpreter.get_tensor(self.eye_index)
         raw_iris_landmarks = self.interpreter.get_tensor(self.iris_index)
-        height, width = self.input_shape[1:3]
+        
         eye_contour = project_landmarks(
             raw_eye_landmarks,
             tensor_size=(width, height),
@@ -489,6 +499,7 @@ class IrisLandmark:
             padding=image_data.padding,
             roi=roi,
             flip_horizontal=is_right_eye)
+        
         iris_landmarks = project_landmarks(
             raw_iris_landmarks,
             tensor_size=(width, height),
@@ -496,8 +507,9 @@ class IrisLandmark:
             padding=image_data.padding,
             roi=roi,
             flip_horizontal=is_right_eye)
+        
+        self.interpreter.reset_all_variables()
         return IrisResults(eye_contour, iris_landmarks)
-
 
 def _get_iris_diameter(
     iris_landmarks: Sequence[Landmark], image_size: Tuple[int, int]
