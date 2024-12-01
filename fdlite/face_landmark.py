@@ -145,16 +145,23 @@ class FaceLandmark:
             model_path = os.path.join(os.path.dirname(my_path), 'data')
         self.model_path = os.path.join(model_path, MODEL_NAME)
         self.interpreter = tf.lite.Interpreter(model_path=self.model_path)
-        self.input_index = self.interpreter.get_input_details()[0]['index']
-        self.input_shape = self.interpreter.get_input_details()[0]['shape']
-        self.data_index = self.interpreter.get_output_details()[0]['index']
-        self.face_index = self.interpreter.get_output_details()[1]['index']
-        data_shape = self.interpreter.get_output_details()[0]['shape']
+
+        input_details = self.interpreter.get_input_details()
+        output_details = self.interpreter.get_output_details()
+
+        self.input_index = input_details[0]['index']
+        self.input_shape = input_details[0]['shape']
+        self.data_index = output_details[0]['index']
+        self.face_index = output_details[1]['index']
+        data_shape = output_details[0]['shape']
         num_exected_elements = NUM_DIMS * NUM_LANDMARKS
         if data_shape[-1] < num_exected_elements:
             raise ModelDataError(f'incompatible model: {data_shape} < '
                                  f'{num_exected_elements}')
         self.interpreter.allocate_tensors()
+        
+        # Create reusable input tensor
+        self.input_tensor = np.zeros(self.input_shape, dtype=np.float32)
 
     def __call__(
         self,
@@ -180,9 +187,13 @@ class FaceLandmark:
             output_size=(width, height),
             keep_aspect_ratio=False,
             output_range=(0., 1.))
-        input_data = image_data.tensor_data[np.newaxis]
-        self.interpreter.set_tensor(self.input_index, input_data)
+        
+        # input_data = image_data.tensor_data[np.newaxis]
+        np.copyto(self.input_tensor[0], image_data.tensor_data)
+        self.interpreter.set_tensor(self.input_index, self.input_tensor)
+
         self.interpreter.invoke()
+
         raw_data = self.interpreter.get_tensor(self.data_index)
         raw_face = self.interpreter.get_tensor(self.face_index)
         # second tensor contains confidence score for a face detection
@@ -190,8 +201,9 @@ class FaceLandmark:
         # no data if no face was detected
         if face_flag <= DETECTION_THRESHOLD:
             return []
+        
         # extract and normalise landmark data
-        height, width = self.input_shape[1:3]
+        self.interpreter.reset_all_variables()
         return project_landmarks(raw_data,
                                  tensor_size=(width, height),
                                  image_size=image_data.original_size,
